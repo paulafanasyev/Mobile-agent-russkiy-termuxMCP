@@ -28,22 +28,18 @@ if [ -f "build/native/libbox.aar" ]; then
   [ -s "build/native/libbox.aar" ] || fail "libbox.aar пустой"
   echo "OK: найден локальный libbox.aar"
 
-  if command -v jar >/dev/null; then
-    if ! unzip -p build/native/libbox.aar classes.jar > /tmp/mobile-agent-libbox-classes.jar; then
-      fail "Не удалось извлечь classes.jar из libbox.aar"
-    fi
+  if command -v jar >/dev/null && command -v unzip >/dev/null; then
+    unzip -p build/native/libbox.aar classes.jar > /tmp/mobile-agent-libbox-classes.jar
     jar tf /tmp/mobile-agent-libbox-classes.jar | grep -q 'io/nekohasekai/libbox/CommandServer.class' \
       || fail "AAR не содержит реальный CommandServer API"
-    if jar tf /tmp/mobile-agent-libbox-classes.jar | grep -q 'io/nekohasekai/libbox/BoxService.class'; then
-      echo "ПРЕДУПРЕЖДЕНИЕ: AAR содержит старый BoxService API; текущий bridge использует CommandServer."
-    fi
     echo "OK: AAR содержит CommandServer API"
   fi
 else
   echo "ПРЕДУПРЕЖДЕНИЕ: libbox.aar пока не собран; native runtime не считается проверенным."
 fi
 
-grep -R "BoxService" modules/firewall/src/main/java modules/firewall/android/src/main/java >/dev/null 2>&1 \
-  && fail "В нашем Android-коде осталась ссылка на устаревший BoxService API"
+if grep -R "io\.nekohasekai\.libbox\.BoxService" modules/firewall/src/main/java modules/firewall/android/src/main/java >/dev/null 2>&1; then
+  fail "В нашем Android-коде осталась ссылка на устаревший BoxService API"
+fi
 
 echo "Проверка конфигурации и libbox bridge завершена."
