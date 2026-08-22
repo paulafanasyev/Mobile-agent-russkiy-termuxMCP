@@ -1,36 +1,83 @@
-# Mobile Agent
+# Мобильный ИИ-агент — русский TermuxMCP
 
-Mobile Agent is an open-source AI agent built specifically for mobile devices that runs entirely on your phone.
+Русская версия мобильного ИИ-агента для Android. Проект предназначен для работы непосредственно на телефоне, в том числе без подключения к интернету при наличии локальной модели.
 
-## Demo
+## Цель проекта
 
-[![Mobile Agent demo](https://img.youtube.com/vi/_P_SQ0MW-aU/maxresdefault.jpg)](https://youtu.be/_P_SQ0MW-aU?si=klxA4b7RU3Y2j5iy)
+Сделать единый русскоязычный интерфейс для ИИ-агента, который сможет безопасно работать с локальными моделями, MCP/TermuxMCP, файлами, документами, расписаниями, подключёнными API и разрешёнными возможностями Android.
 
-## Features
+Центральный интерфейс проекта — **Светлана**: голосовой и текстовый помощник, который планирует задачи и выполняет их через разрешённые инструменты.
 
-- On-device models that can run completely offline
-- Runs completely on-device
-- No external server required
-- MCP support
-- Skills system
-- Persistent memory
-- Multi-modal support
-- Direct access to phone's internal storage
-- Android permission-based access
+## Основные возможности архитектуры
 
-## Installation
+- локальные модели и автономная работа;
+- облачные ИИ-провайдеры при наличии сети;
+- MCP и расширяемые навыки;
+- долговременная память;
+- работа с локальными файлами;
+- документы и рабочие материалы;
+- фоновые задачи и расписания;
+- уведомления и будильники;
+- голосовой ввод и голосовой вывод — по мере доступности нативных компонентов;
+- TermuxMCP для взаимодействия с Termux;
+- безопасное хранилище секретов и API-ключей;
+- журнал действий агента;
+- подтверждение чувствительных и необратимых операций;
+- сетевой экран на базе Android VPN/TUN;
+- воспроизводимая сборка `libbox.aar` без хранения бинарника в Git.
 
-The application is distributed through GitHub Releases.
+## Сетевой экран
 
-1. Download the latest APK from the Releases page.
-2. Install the APK on your Android device.
-3. Grant the required permissions.
-4. Start using Mobile Agent.
+Сетевой экран проектируется как отдельный защищённый слой:
 
-## Contributing
+`Светлана → инструменты безопасности → правила → VPN/TUN → сетевой движок`
 
-Contributions are welcome. Feel free to open an issue for bug reports, feature requests, or submit a pull request if you'd like to contribute.
+Предусмотрены правила приложений, IP/CIDR, портов и протоколов, журнал событий, профили защиты и аварийное отключение. Полноценный режим forwarding считается готовым только после успешной сборки и тестирования реального native-движка на Android.
 
-## License
+## Воспроизводимая сборка libbox
 
-This project is licensed under the MIT License.
+Бинарный `libbox.aar` намеренно **не хранится в Git**. Он собирается из закреплённой версии `sing-box`:
+
+```bash
+bash scripts/build-libbox-android.sh
+```
+
+или:
+
+```bash
+make libbox-android
+```
+
+Результаты:
+
+- `build/native/libbox.aar`;
+- `build/native/sing-box-revision.txt`;
+- `build/native/libbox.aar.sha256`.
+
+Проверка контрольной суммы:
+
+```bash
+sha256sum -c build/native/libbox.aar.sha256
+```
+
+Android-конфигурация автоматически подключает созданный AAR к сгенерированному проекту.
+
+## Сборка приложения
+
+Требуются Node.js/pnpm, Java 17, Android SDK/NDK и рабочее Android-окружение Expo/React Native.
+
+Сначала соберите `libbox.aar`, затем выполните Android prebuild и сборку приложения.
+
+## Принцип безопасности
+
+Агент не получает бесконтрольный доступ к телефону только потому, что пользователь попросил его об этом. Возможности зависят от разрешений Android и подключённых инструментов. Опасные действия должны требовать явного подтверждения, а API-ключи не должны попадать в Git.
+
+## Связь с «Миром Самозанятых»
+
+После стабилизации приложения оно будет размещено на странице проектов «Мир Самозанятых» как отдельный проект для управления TermuxMCP, локальными и облачными ИИ-агентами и разрешёнными функциями телефона.
+
+## Статус
+
+Проект находится в активной разработке. Исходная агентная архитектура уже перенесена в репозиторий; русская оболочка, Светлана, TermuxMCP, нативные функции Android и сетевой экран доводятся поэтапно.
+
+**Важно:** наличие файла или интерфейса в исходниках не считается подтверждением работоспособности. Готовность каждой нативной функции подтверждается сборкой и тестированием на Android.
