@@ -13,19 +13,16 @@ import io.nekohasekai.libbox.SystemProxyStatus
 /**
  * Реальный мост Android VpnService -> CommandServer -> libbox.
  *
- * В собранном AAR из закреплённого revision API предоставляет CommandServer,
- * а не старый BoxService. Поэтому мост использует фактический API артефакта.
+ * В текущем закреплённом AAR используется фактический CommandServer API,
+ * а не старый BoxService API.
  */
 class LibboxForwardingBridge(
     private val context: Context,
     private val vpnService: VpnService,
     private val packages: List<String>,
 ) : CommandServerHandler {
-    @Volatile
-    private var commandServer: CommandServer? = null
-
-    @Volatile
-    private var running = false
+    @Volatile private var commandServer: CommandServer? = null
+    @Volatile private var running = false
 
     fun start(configJson: String): Result<Unit> {
         if (configJson.isBlank()) {
@@ -33,7 +30,6 @@ class LibboxForwardingBridge(
         }
         return runCatching {
             stop()
-
             val setup = io.nekohasekai.libbox.SetupOptions().apply {
                 basePath = context.filesDir.absolutePath
                 workingPath = context.filesDir.absolutePath
@@ -47,18 +43,22 @@ class LibboxForwardingBridge(
 
             val platform: PlatformInterface = LibboxAndroidPlatform(vpnService, packages)
             val server = CommandServer(this, platform)
-            server.start()
-            server.startOrReloadService(
-                configJson,
-                OverrideOptions().apply {
-                    autoRedirect = false
-                },
-            )
+            try {
+                server.start()
+                server.startOrReloadService(
+                    configJson,
+                    OverrideOptions().apply { autoRedirect = false },
+                )
+            } catch (t: Throwable) {
+                runCatching { server.closeService() }
+                runCatching { server.close() }
+                throw t
+            }
+
             commandServer = server
             running = true
         }.onFailure {
             Log.e(TAG, "Не удалось запустить libbox", it)
-            runCatching { commandServer?.close() }
             commandServer = null
             running = false
         }
@@ -76,13 +76,8 @@ class LibboxForwardingBridge(
 
     fun isRunning(): Boolean = running
 
-    override fun serviceStop() {
-        running = false
-    }
-
-    override fun serviceReload() {
-        // Перезагрузка выполняется вызывающим слоем с новой конфигурацией.
-    }
+    override fun serviceStop() = stop()
+    override fun serviceReload() = Unit
 
     override fun getSystemProxyStatus(): SystemProxyStatus = SystemProxyStatus().apply {
         available = false
