@@ -66,22 +66,26 @@ jobs:
             "platforms;android-21" \
             "platforms;android-23" \
             "platforms;android-35" \
+            "platforms;android-36" \
             "build-tools;35.0.0" \
+            "build-tools;36.0.0" \
             "ndk;28.0.13004108"
 
           export ANDROID_NDK_ROOT="$ANDROID_HOME/ndk/28.0.13004108"
           export ANDROID_NDK_HOME="$ANDROID_NDK_ROOT"
           echo "ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT" >> "$GITHUB_ENV"
-          echo "ANDROID_NDK_HOME=$ANDROID_NDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> "$GITHUB_ENV"
 
           echo '===== ANDROID TOOLCHAIN PREFLIGHT ====='
           java -version
           sdkmanager --version
-          sdkmanager --sdk_root="$ANDROID_HOME" --list_installed | grep -E 'platforms;android-(21|23|35)|build-tools;35.0.0|ndk;28.0.13004108'
+          sdkmanager --sdk_root="$ANDROID_HOME" --list_installed | grep -E 'platforms;android-(21|23|35|36)|build-tools;(35|36).0.0|ndk;28.0.13004108'
           test -f "$ANDROID_HOME/platforms/android-21/android.jar"
           test -f "$ANDROID_HOME/platforms/android-23/android.jar"
           test -f "$ANDROID_HOME/platforms/android-35/android.jar"
+          test -f "$ANDROID_HOME/platforms/android-36/android.jar"
           test -x "$ANDROID_HOME/build-tools/35.0.0/aapt2"
+          test -x "$ANDROID_HOME/build-tools/36.0.0/aapt2"
           test -x "$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
 
       - name: Собрать воспроизводимый libbox.aar
@@ -139,4 +143,4 @@ jobs:
         run: |
           echo "libbox revision: $(cat build/native/sing-box-revision.txt)"
           echo "libbox SHA256: $(cut -d' ' -f1 build/native/libbox.aar.sha256)"
-          echo "Preflight: SDK API 21/23/35 + NDK 28 + AAR checksum + CommandServer проверены"
+          echo "Preflight: SDK API 21/23/35/36 + NDK 28 + AAR checksum + CommandServer проверены"
