@@ -1,7 +1,12 @@
 import { Platform } from 'react-native'
 import { requireNativeModule } from 'expo'
 
-export type FirewallMode = 'off' | 'allowlist' | 'blocklist'
+/**
+ * Первый безопасный этап фаервола: строгий список разрешённых приложений.
+ * Режим blocklist будет добавлен после появления полноценного packet-processing
+ * backend, чтобы не создавать ложного ощущения блокировки.
+ */
+export type FirewallMode = 'off' | 'allowlist'
 
 export type FirewallStatus = {
   running: boolean
@@ -10,6 +15,7 @@ export type FirewallStatus = {
 }
 
 type NativeFirewall = {
+  prepare(): Promise<boolean>
   start(mode: FirewallMode, packages: string[]): Promise<void>
   stop(): Promise<void>
   status(): Promise<FirewallStatus>
@@ -20,8 +26,14 @@ const native = Platform.OS === 'android'
   ? requireNativeModule<NativeFirewall>('Firewall')
   : null
 
+/** Открывает системный диалог разрешения VPN. */
+export async function prepareFirewall(): Promise<boolean> {
+  if (native) return native.prepare()
+  return true
+}
+
 export async function startFirewall(
-  mode: FirewallMode = 'blocklist',
+  mode: FirewallMode = 'allowlist',
   packages: string[] = [],
 ): Promise<void> {
   if (native) await native.start(mode, packages)
