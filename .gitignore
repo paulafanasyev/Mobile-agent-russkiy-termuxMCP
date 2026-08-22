@@ -42,9 +42,13 @@ example
 /ios
 /android
 
-
+# APK artifacts
 *.apk
 
 # Local Expo module Android build output
 /modules/*/android/build/
 /modules/*/android/.gradle/
+
+# Reproducible native libbox build output
+/build/native/
+/.native-build/
