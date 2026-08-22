@@ -1,0 +1,61 @@
+name: Воспроизводимая сборка libbox Android
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/build-libbox-android.sh'
+      - 'scripts/README-libbox-android.md'
+      - 'Makefile'
+      - '.github/workflows/build-libbox-reproducible.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: libbox.aar ARM64 из закреплённого исходника
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Получить проект
+        uses: actions/checkout@v4
+
+      - name: Установить Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Установить Go 1.23.1
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.1'
+          cache: false
+
+      - name: Установить Android SDK и NDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0 ndk;28.0.13004108'
+
+      - name: Выполнить ту же сборку, что и локально
+        run: |
+          bash scripts/build-libbox-android.sh
+
+      - name: Проверить revision
+        run: |
+          test "$(cat build/native/sing-box-revision.txt)" = "670d7a7693918b765a17c44aee5afb5d47ead390"
+
+      - name: Проверить SHA256
+        run: |
+          sha256sum -c build/native/libbox.aar.sha256
+
+      - name: Опубликовать проверенный AAR как artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libbox-android-arm64-reproducible
+          path: |
+            build/native/libbox.aar
+            build/native/sing-box-revision.txt
+            build/native/libbox.aar.sha256
+          if-no-files-found: error
+          retention-days: 14
