@@ -1,0 +1,74 @@
+name: Сборка libbox Android
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/build-libbox-android.yml'
+      - 'modules/firewall/**'
+
+jobs:
+  build-libbox:
+    name: Сборка libbox.aar ARM64
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: write
+
+    steps:
+      - name: Получить репозиторий
+        uses: actions/checkout@v4
+
+      - name: Установить Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Установить Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.1'
+          cache: false
+
+      - name: Установить Android SDK и NDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-35 build-tools;35.0.0 ndk;28.0.13004108'
+
+      - name: Проверить окружение
+        run: |
+          java -version
+          go version
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT"
+
+      - name: Получить закреплённый sing-box
+        run: |
+          git clone --depth 1 --branch testing https://github.com/SagerNet/sing-box.git /tmp/sing-box
+          cd /tmp/sing-box
+          git rev-parse HEAD | tee "$GITHUB_WORKSPACE/sing-box-revision.txt"
+
+      - name: Установить gomobile/gobind
+        working-directory: /tmp/sing-box
+        run: |
+          go install github.com/sagernet/gomobile/cmd/gomobile@v0.1.13
+          go install github.com/sagernet/gomobile/cmd/gobind@v0.1.13
+          "$(go env GOPATH)/bin/gomobile" init
+
+      - name: Собрать libbox AAR ARM64
+        working-directory: /tmp/sing-box
+        run: |
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          export JAVA_HOME="${JAVA_HOME_17_X64}"
+          go run ./cmd/internal/build_libbox -target android -platform android/arm64
+
+      - name: Опубликовать AAR и revision
+        uses: actions/upload-artifact@v4
+        with:
+          name: libbox-android-arm64
+          path: |
+            /tmp/sing-box/libbox.aar
+            sing-box-revision.txt
+          if-no-files-found: error
+          retention-days: 14
