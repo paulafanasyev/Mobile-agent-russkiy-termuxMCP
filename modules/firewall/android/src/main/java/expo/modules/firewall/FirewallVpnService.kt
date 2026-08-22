@@ -1,13 +1,12 @@
 package expo.modules.firewall
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.Intent
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
-import androidx.core.app.NotificationCompat
 
 class FirewallVpnService : VpnService() {
   private var vpnInterface: ParcelFileDescriptor? = null
@@ -32,13 +31,22 @@ class FirewallVpnService : VpnService() {
       )
     }
 
-    val notification = NotificationCompat.Builder(this, channelId)
-      .setSmallIcon(android.R.drawable.ic_lock_lock)
-      .setContentTitle("Mobile Agent — фаервол")
-      .setContentText("Защита сетевого трафика включена")
-      .setOngoing(true)
-      .setCategory(NotificationCompat.CATEGORY_SERVICE)
-      .build()
+    val notification = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+      Notification.Builder(this, channelId)
+        .setSmallIcon(android.R.drawable.ic_lock_lock)
+        .setContentTitle("Mobile Agent — фаервол")
+        .setContentText("Защита сетевого трафика включена")
+        .setOngoing(true)
+        .build()
+    } else {
+      @Suppress("DEPRECATION")
+      Notification.Builder(this)
+        .setSmallIcon(android.R.drawable.ic_lock_lock)
+        .setContentTitle("Mobile Agent — фаервол")
+        .setContentText("Защита сетевого трафика включена")
+        .setOngoing(true)
+        .build()
+    }
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
       startForeground(
