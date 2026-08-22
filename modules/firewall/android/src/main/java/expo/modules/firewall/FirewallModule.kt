@@ -32,6 +32,7 @@ class FirewallModule : Module() {
                 "Пока поддерживается только безопасный режим списка разрешённых приложений (allowlist)"
             }
             startService(context, requestedMode, packages)
+            true
         }
 
         AsyncFunction("stop") {
@@ -50,6 +51,7 @@ class FirewallModule : Module() {
             }
             context.stopService(Intent(context, FirewallVpnService::class.java))
             startService(context, requestedMode, packages)
+            true
         }
 
         AsyncFunction("status") {
@@ -63,7 +65,7 @@ class FirewallModule : Module() {
 
     private fun startService(context: Context, mode: String, packages: List<String>) {
         val intent = Intent(context, FirewallVpnService::class.java).apply {
-            putStringExtra(FirewallVpnService.EXTRA_MODE, mode)
+            putExtra(FirewallVpnService.EXTRA_MODE, mode)
             putStringArrayListExtra(FirewallVpnService.EXTRA_PACKAGES, ArrayList(packages.distinct()))
         }
         ContextCompat.startForegroundService(context, intent)
