@@ -36,9 +36,10 @@ class FirewallModule : Module() {
         }
 
         AsyncFunction("stop") {
-            val context = appContext.reactContext ?: return@AsyncFunction
+            val context = appContext.reactContext ?: throw IllegalStateException("Контекст Android недоступен")
             context.stopService(Intent(context, FirewallVpnService::class.java))
             FirewallRuntimeState.set(false, emptyList())
+            true
         }
 
         AsyncFunction("setRules") { requestedMode: String, packages: List<String> ->
