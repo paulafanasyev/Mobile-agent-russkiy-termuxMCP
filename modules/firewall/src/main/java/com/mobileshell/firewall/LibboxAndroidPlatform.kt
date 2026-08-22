@@ -1,11 +1,9 @@
 package com.mobileshell.firewall
 
 import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.net.NetworkInterface
 import android.net.VpnService
 import android.os.Build
-import android.os.ParcelFileDescriptor
 import android.os.Process
 import io.nekohasekai.libbox.BridgeOptions
 import io.nekohasekai.libbox.BridgeSession
@@ -13,10 +11,9 @@ import io.nekohasekai.libbox.ConnectionOwner
 import io.nekohasekai.libbox.InterfaceUpdateListener
 import io.nekohasekai.libbox.Libbox
 import io.nekohasekai.libbox.LocalDNSTransport
-import io.nekohasekai.libbox.NeighborEntryIterator
-import io.nekohasekai.libbox.NeighborUpdateListener
 import io.nekohasekai.libbox.NetworkInterface as LibboxNetworkInterface
 import io.nekohasekai.libbox.NetworkInterfaceIterator
+import io.nekohasekai.libbox.NeighborUpdateListener
 import io.nekohasekai.libbox.PlatformInterface
 import io.nekohasekai.libbox.PlatformUser
 import io.nekohasekai.libbox.ShellSession
@@ -28,15 +25,14 @@ import java.net.InetSocketAddress
 /**
  * Реализация PlatformInterface для Android VpnService.
  *
- * Важное отличие от старого каркаса: TUN создаётся Android VpnService.Builder,
- * а полученный дескриптор передаётся реальному libbox через PlatformInterface.
+ * TUN создаётся Android VpnService.Builder, а дескриптор передаётся реальному
+ * libbox через PlatformInterface.openTun().
  */
 internal class LibboxAndroidPlatform(
     private val service: VpnService,
     private val packages: List<String>,
 ) : PlatformInterface {
-    private val connectivity =
-        service.getSystemService(ConnectivityManager::class.java)
+    private val connectivity = service.getSystemService(ConnectivityManager::class.java)
 
     override fun usePlatformAutoDetectInterfaceControl(): Boolean = true
 
@@ -45,26 +41,20 @@ internal class LibboxAndroidPlatform(
     }
 
     override fun openTun(options: TunOptions): Int {
-        check(VpnService.prepare(service) == null) {
-            "Не предоставлено разрешение Android VPN"
-        }
+        check(VpnService.prepare(service) == null) { "Не предоставлено разрешение Android VPN" }
 
+        val mtu = if (options.mtu > 0) options.mtu.coerceIn(576, 65535) else 9000
         val builder = service.Builder()
             .setSession("Mobile Agent — Защита сети")
-            .setMtu(options.mtu.coerceIn(576, 65535))
+            .setMtu(mtu)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            builder.setMetered(false)
-        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) builder.setMetered(false)
 
         addAddresses(builder, options)
         addRoutes(builder, options)
         addPackages(builder, options)
 
-        val descriptor = builder.establish()
-            ?: error("Android не смог создать TUN-интерфейс")
-
-        return descriptor.detachFd()
+        return (builder.establish() ?: error("Android не смог создать TUN-интерфейс")).detachFd()
     }
 
     private fun addAddresses(builder: VpnService.Builder, options: TunOptions) {
@@ -84,46 +74,39 @@ internal class LibboxAndroidPlatform(
         if (!options.autoRoute) return
 
         val dns = options.dnsServerAddress
-        while (dns.hasNext()) {
-            runCatching { builder.addDnsServer(dns.next()) }
-        }
+        while (dns.hasNext()) runCatching { builder.addDnsServer(dns.next()) }
 
+        var hasIpv4 = false
         val ipv4 = options.inet4RouteRange
         while (ipv4.hasNext()) {
+            hasIpv4 = true
             val prefix = ipv4.next()
             builder.addRoute(prefix.address(), prefix.prefix())
         }
+
+        var hasIpv6 = false
         val ipv6 = options.inet6RouteRange
         while (ipv6.hasNext()) {
+            hasIpv6 = true
             val prefix = ipv6.next()
             builder.addRoute(prefix.address(), prefix.prefix())
         }
 
-        if (!ipv4HadRoute(options) && !ipv6HadRoute(options)) {
-            if (options.inet4Address.hasNext()) builder.addRoute("0.0.0.0", 0)
-            if (options.inet6Address.hasNext()) builder.addRoute("::", 0)
-        }
+        if (!hasIpv4 && options.inet4Address.hasNext()) builder.addRoute("0.0.0.0", 0)
+        if (!hasIpv6 && options.inet6Address.hasNext()) builder.addRoute("::", 0)
     }
-
-    private fun ipv4HadRoute(options: TunOptions): Boolean =
-        options.inet4RouteAddress.hasNext() || options.inet4RouteRange.hasNext()
-
-    private fun ipv6HadRoute(options: TunOptions): Boolean =
-        options.inet6RouteAddress.hasNext() || options.inet6RouteRange.hasNext()
 
     private fun addPackages(builder: VpnService.Builder, options: TunOptions) {
         val include = mutableListOf<String>()
         val includeIterator = options.includePackage
         while (includeIterator.hasNext()) include += includeIterator.next()
         if (include.isEmpty()) include += packages
-        include.distinct().filter { it.isNotBlank() }.forEach { packageName ->
+        include.distinct().filter(String::isNotBlank).forEach { packageName ->
             runCatching { builder.addAllowedApplication(packageName) }
         }
 
         val exclude = options.excludePackage
-        while (exclude.hasNext()) {
-            runCatching { builder.addDisallowedApplication(exclude.next()) }
-        }
+        while (exclude.hasNext()) runCatching { builder.addDisallowedApplication(exclude.next()) }
     }
 
     override fun useProcFS(): Boolean = false
@@ -135,21 +118,18 @@ internal class LibboxAndroidPlatform(
         destinationAddress: String,
         destinationPort: Int,
     ): ConnectionOwner {
-        check(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            "Поиск владельца соединения доступен на Android 10+"
-        }
+        check(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { "Поиск владельца соединения доступен на Android 10+" }
         val uid = connectivity.getConnectionOwnerUid(
             ipProtocol,
             InetSocketAddress(sourceAddress, sourcePort),
             InetSocketAddress(destinationAddress, destinationPort),
         )
         check(uid != Process.INVALID_UID) { "Владелец соединения не найден" }
+        val packageNames = service.packageManager.getPackagesForUid(uid)?.toList().orEmpty()
         return ConnectionOwner().apply {
             userId = uid
-            userName = service.packageManager.getPackagesForUid(uid)?.firstOrNull() ?: ""
-            setAndroidPackageNames(
-                LibboxStringIterator(service.packageManager.getPackagesForUid(uid)?.toList() ?: emptyList()),
-            )
+            userName = packageNames.firstOrNull() ?: ""
+            setAndroidPackageNames(LibboxStringIterator(packageNames))
         }
     }
 
@@ -157,7 +137,7 @@ internal class LibboxAndroidPlatform(
     override fun closeDefaultInterfaceMonitor(listener: InterfaceUpdateListener) = Unit
 
     override fun getInterfaces(): NetworkInterfaceIterator {
-        val values = NetworkInterface.getNetworkInterfaces()?.toList().orEmpty().mapNotNull { network ->
+        val values = NetworkInterface.getNetworkInterfaces().asSequence().mapNotNull { network ->
             runCatching {
                 LibboxNetworkInterface().apply {
                     name = network.name
@@ -165,12 +145,15 @@ internal class LibboxAndroidPlatform(
                     mtu = network.mtu
                     flags = 0
                     type = Libbox.InterfaceTypeOther
-                    addresses = LibboxStringIterator(network.interfaceAddresses.map { "${it.address.hostAddress}/${it.networkPrefixLength}" })
+                    addresses = LibboxStringIterator(
+                        network.interfaceAddresses.map { "${it.address.hostAddress}/${it.networkPrefixLength}" },
+                    )
                     dnsServer = LibboxStringIterator(emptyList())
                     metered = false
                 }
             }.getOrNull()
-        }
+        }.toList()
+
         return object : NetworkInterfaceIterator {
             private val iterator = values.iterator()
             override fun hasNext(): Boolean = iterator.hasNext()
