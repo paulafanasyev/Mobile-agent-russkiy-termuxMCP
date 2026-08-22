@@ -2,11 +2,13 @@
 set -euo pipefail
 
 # Воспроизводимая локальная сборка libbox.aar для Android ARM64.
-# Требования: git, go, Java 17, Android SDK/NDK, ANDROID_HOME или ANDROID_SDK_ROOT.
+# Требования: git, go 1.24.7+, Java 17, Android SDK/NDK,
+# ANDROID_HOME или ANDROID_SDK_ROOT.
 
 SING_BOX_REPO="https://github.com/SagerNet/sing-box.git"
 SING_BOX_COMMIT="670d7a7693918b765a17c44aee5afb5d47ead390"
-GOMOBILE_VERSION="v0.1.13"
+# Совпадает с gomobile, закреплённой в go.mod этого revision sing-box.
+GOMOBILE_VERSION="v0.1.12"
 BUILD_ROOT="${BUILD_ROOT:-$PWD/.native-build}"
 SING_BOX_DIR="$BUILD_ROOT/sing-box"
 OUTPUT_DIR="$PWD/build/native"
@@ -24,10 +26,25 @@ if [ "${JAVA_MAJOR:-}" != "17" ]; then
   exit 1
 fi
 
-if [ -z "${ANDROID_HOME:-}" ] && [ -z "${ANDROID_SDK_ROOT:-}" ]; then
+ANDROID_SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+if [ -z "$ANDROID_SDK" ]; then
   echo "Ошибка: установите ANDROID_HOME или ANDROID_SDK_ROOT" >&2
   exit 1
 fi
+
+export ANDROID_HOME="$ANDROID_SDK"
+export ANDROID_SDK_ROOT="$ANDROID_SDK"
+
+# sing-box build_libbox создаёт варианты с Android API 23 и 21.
+# Поэтому platform-35 сам по себе недостаточен.
+test -d "$ANDROID_SDK/platforms/android-23" || {
+  echo "Ошибка: Android SDK platform android-23 не установлен" >&2
+  exit 1
+}
+test -d "$ANDROID_SDK/platforms/android-21" || {
+  echo "Ошибка: Android SDK platform android-21 не установлен" >&2
+  exit 1
+}
 
 mkdir -p "$BUILD_ROOT" "$OUTPUT_DIR"
 rm -rf "$SING_BOX_DIR"
