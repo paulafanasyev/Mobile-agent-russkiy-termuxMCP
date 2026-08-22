@@ -26,16 +26,26 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Установить Go 1.23.1
+      - name: Установить Go 1.24.7
         uses: actions/setup-go@v6
         with:
-          go-version: '1.23.1'
+          go-version: '1.24.7'
           cache: false
 
       - name: Установить Android SDK и NDK
         uses: android-actions/setup-android@v4
         with:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.0 ndk;28.0.13004108'
+
+      - name: Проверить окружение
+        run: |
+          java -version
+          go version
+          export ANDROID_NDK_ROOT="$ANDROID_HOME/ndk/28.0.13004108"
+          echo "ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT"
+          test -x "$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
 
       - name: Выполнить ту же сборку, что и локально
         run: bash scripts/build-libbox-android.sh
