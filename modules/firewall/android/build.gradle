@@ -12,8 +12,13 @@ android {
     versionCode 1
     versionName "1.0.0"
   }
+
+  sourceSets {
+    main.java.srcDirs += file("../../src/main/java")
+  }
 }
 
 dependencies {
   compileOnly 'com.facebook.react:react-android'
+  compileOnly files("../../../build/native/libbox.aar")
 }
