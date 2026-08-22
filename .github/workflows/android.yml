@@ -48,27 +48,39 @@ jobs:
 
       - name: Android SDK и NDK
         uses: android-actions/setup-android@v4
+        with:
+          packages: ''
 
       - name: Установить Android SDK/NDK
         shell: bash
         run: |
+          set -euo pipefail
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager \
+
+          # Устанавливаем компоненты явно. Не полагаемся на предустановленный runner SDK.
+          sdkmanager --install \
             "platform-tools" \
             "platforms;android-21" \
             "platforms;android-23" \
             "platforms;android-35" \
             "build-tools;35.0.0" \
             "ndk;28.0.13004108"
+
           export ANDROID_NDK_ROOT="$ANDROID_HOME/ndk/28.0.13004108"
           echo "ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT" >> "$GITHUB_ENV"
-          echo "$ANDROID_NDK_ROOT" >> "$GITHUB_PATH"
+
+          echo "===== SDK ====="
           echo "ANDROID_HOME=$ANDROID_HOME"
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
           echo "ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT"
+          sdkmanager --list_installed | grep -E 'platforms;android-(21|23|35)|build-tools;35.0.0|ndk;28.0.13004108' || true
+
+          echo "===== REQUIRED FILES ====="
           test -d "$ANDROID_HOME/platforms/android-21"
           test -d "$ANDROID_HOME/platforms/android-23"
           test -d "$ANDROID_HOME/platforms/android-35"
+          test -d "$ANDROID_HOME/build-tools/35.0.0"
+          test -d "$ANDROID_NDK_ROOT"
           test -x "$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
 
       - name: Собрать воспроизводимый libbox.aar
@@ -76,6 +88,10 @@ jobs:
 
       - name: Проверить libbox
         run: |
+          set -euo pipefail
+          test -s build/native/libbox.aar
+          test -s build/native/libbox.aar.sha256
+          test -s build/native/sing-box-revision.txt
           sha256sum -c build/native/libbox.aar.sha256
           test "$(cat build/native/sing-box-revision.txt)" = "670d7a7693918b765a17c44aee5afb5d47ead390"
           bash scripts/verify-android-agent.sh
@@ -86,7 +102,7 @@ jobs:
       - name: Expo prebuild
         run: pnpm exec expo prebuild --platform android --clean
 
-      - name: Проверить наличие AAR в Android-проекте
+      - name: Проверить наличие AAR
         run: test -s build/native/libbox.aar
 
       - name: Собрать отладочный APK
@@ -97,6 +113,7 @@ jobs:
         id: apk
         shell: bash
         run: |
+          set -euo pipefail
           APK=$(find android/app/build/outputs/apk -type f -name '*.apk' | head -1)
           test -n "$APK"
           echo "path=$APK" >> "$GITHUB_OUTPUT"
