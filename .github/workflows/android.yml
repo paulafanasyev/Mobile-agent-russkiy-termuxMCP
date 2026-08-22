@@ -55,6 +55,8 @@ jobs:
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager \
             "platform-tools" \
+            "platforms;android-21" \
+            "platforms;android-23" \
             "platforms;android-35" \
             "build-tools;35.0.0" \
             "ndk;28.0.13004108"
@@ -62,7 +64,11 @@ jobs:
           echo "ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT" >> "$GITHUB_ENV"
           echo "$ANDROID_NDK_ROOT" >> "$GITHUB_PATH"
           echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
           echo "ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT"
+          test -d "$ANDROID_HOME/platforms/android-21"
+          test -d "$ANDROID_HOME/platforms/android-23"
+          test -d "$ANDROID_HOME/platforms/android-35"
           test -x "$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
 
       - name: Собрать воспроизводимый libbox.aar
