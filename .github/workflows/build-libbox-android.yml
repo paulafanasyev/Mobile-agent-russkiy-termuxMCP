@@ -25,10 +25,10 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Установить Go
+      - name: Установить Go 1.24.7
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23.1'
+          go-version: '1.24.7'
           cache: false
 
       - name: Установить Android SDK и NDK
@@ -40,8 +40,11 @@ jobs:
         run: |
           java -version
           go version
+          export ANDROID_NDK_ROOT="$ANDROID_HOME/ndk/28.0.13004108"
+          echo "ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT" >> "$GITHUB_ENV"
           echo "ANDROID_HOME=$ANDROID_HOME"
           echo "ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT"
+          test -x "$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
 
       - name: Получить закреплённый sing-box
         run: |
