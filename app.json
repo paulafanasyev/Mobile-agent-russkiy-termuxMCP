@@ -9,7 +9,7 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.tecnicalbot.mobileagent",
+      "bundleIdentifier": "ru.mirsamozanyatykh.mobileagent",
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsLocalNetworking": true
@@ -20,7 +20,7 @@
       }
     },
     "android": {
-      "versionCode": 2,
+      "versionCode": 3,
       "permissions": [
         "android.permission.REQUEST_INSTALL_PACKAGES",
         "android.permission.WAKE_LOCK",
@@ -41,7 +41,7 @@
         "monochromeImage": "./assets/images/icon.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.tecnicalbot.mobileagent"
+      "package": "ru.mirsamozanyatykh.mobileagent"
     },
     "web": {
       "output": "server",
@@ -84,11 +84,7 @@
       "reactCompiler": true
     },
     "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "7944daea-4e83-4c42-8bb5-604ac6ec6ea8"
-      }
-    },
-    "owner": "tecnicalbot"
+      "router": {}
+    }
   }
 }
