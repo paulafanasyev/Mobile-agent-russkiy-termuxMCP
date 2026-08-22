@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - '.github/workflows/build-libbox-android.yml'
+      - 'scripts/build-libbox-android.sh'
       - 'modules/firewall/**'
 
 jobs:
@@ -13,7 +14,6 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-      actions: write
 
     steps:
       - name: Получить репозиторий
@@ -32,46 +32,64 @@ jobs:
           cache: false
 
       - name: Установить Android SDK и NDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
         with:
           packages: 'platform-tools platforms;android-35 build-tools;35.0.0 ndk;28.0.13004108'
 
-      - name: Проверить окружение
+      - name: Проверить Android окружение
+        shell: bash
         run: |
+          set -euo pipefail
+          echo "ANDROID_HOME=${ANDROID_HOME:-}"
+          echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT:-}"
           java -version
           go version
+          sdkmanager --version
           export ANDROID_NDK_ROOT="$ANDROID_HOME/ndk/28.0.13004108"
           echo "ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT" >> "$GITHUB_ENV"
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT"
+          test -d "$ANDROID_HOME/platforms/android-35"
+          test -d "$ANDROID_HOME/build-tools/35.0.0"
           test -x "$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
 
-      - name: Получить закреплённый sing-box
+      - name: Собрать libbox.aar воспроизводимым скриптом
+        shell: bash
         run: |
-          git clone --depth 1 --branch testing https://github.com/SagerNet/sing-box.git /tmp/sing-box
-          cd /tmp/sing-box
-          git rev-parse HEAD | tee "$GITHUB_WORKSPACE/sing-box-revision.txt"
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/logs"
+          bash scripts/build-libbox-android.sh 2>&1 | tee "$RUNNER_TEMP/logs/libbox-build.log"
 
-      - name: Установить gomobile/gobind
-        working-directory: /tmp/sing-box
+      - name: Проверить AAR и контрольную сумму
+        shell: bash
         run: |
-          go install github.com/sagernet/gomobile/cmd/gomobile@v0.1.13
-          go install github.com/sagernet/gomobile/cmd/gobind@v0.1.13
-          "$(go env GOPATH)/bin/gomobile" init
+          set -euo pipefail
+          test -s build/native/libbox.aar
+          test -s build/native/sing-box-revision.txt
+          test -s build/native/libbox.aar.sha256
+          sha256sum -c build/native/libbox.aar.sha256
+          unzip -t build/native/libbox.aar >/dev/null
+          echo "===== REVISION ====="
+          cat build/native/sing-box-revision.txt
+          echo "===== SHA256 ====="
+          cat build/native/libbox.aar.sha256
+          echo "===== AAR ====="
+          stat -c '%n %s bytes' build/native/libbox.aar
 
-      - name: Собрать libbox AAR ARM64
-        working-directory: /tmp/sing-box
-        run: |
-          export PATH="$(go env GOPATH)/bin:$PATH"
-          export JAVA_HOME="${JAVA_HOME_17_X64}"
-          go run ./cmd/internal/build_libbox -target android -platform android/arm64
-
-      - name: Опубликовать AAR и revision
+      - name: Опубликовать libbox AAR
         uses: actions/upload-artifact@v4
         with:
           name: libbox-android-arm64
           path: |
-            /tmp/sing-box/libbox.aar
-            sing-box-revision.txt
+            build/native/libbox.aar
+            build/native/libbox.aar.sha256
+            build/native/sing-box-revision.txt
           if-no-files-found: error
           retention-days: 14
+
+      - name: Опубликовать лог сборки
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: libbox-build-log
+          path: ${{ runner.temp }}/logs/libbox-build.log
+          if-no-files-found: ignore
+          retention-days: 7
