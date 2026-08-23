@@ -59,23 +59,15 @@ jobs:
           export ANDROID_SDK_ROOT="$ANDROID_HOME"
           echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
-
           yes | sdkmanager --sdk_root="$ANDROID_HOME" --licenses >/dev/null 2>&1 || true
           sdkmanager --sdk_root="$ANDROID_HOME" --install \
-            "platform-tools" \
-            "platforms;android-21" \
-            "platforms;android-23" \
-            "platforms;android-35" \
-            "platforms;android-36" \
-            "build-tools;35.0.0" \
-            "build-tools;36.0.0" \
-            "ndk;28.0.13004108"
-
+            "platform-tools" "platforms;android-21" "platforms;android-23" \
+            "platforms;android-35" "platforms;android-36" \
+            "build-tools;35.0.0" "build-tools;36.0.0" "ndk;28.0.13004108"
           export ANDROID_NDK_ROOT="$ANDROID_HOME/ndk/28.0.13004108"
           export ANDROID_NDK_HOME="$ANDROID_NDK_ROOT"
           echo "ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT" >> "$GITHUB_ENV"
           echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> "$GITHUB_ENV"
-
           echo '===== ANDROID TOOLCHAIN PREFLIGHT ====='
           java -version
           sdkmanager --version
@@ -106,6 +98,28 @@ jobs:
           unzip -t build/native/libbox.aar >/dev/null
           bash scripts/verify-android-agent.sh
 
+      - name: Подготовить локальный Maven-модуль libbox
+        shell: bash
+        run: |
+          set -euo pipefail
+          MAVEN_DIR="build/native/maven/ru/mirsamozanyatykh/libbox/1.0.0"
+          mkdir -p "$MAVEN_DIR"
+          cp build/native/libbox.aar "$MAVEN_DIR/libbox-1.0.0.aar"
+          cat > "$MAVEN_DIR/libbox-1.0.0.pom" <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <project xmlns="http://maven.apache.org/POM/4.0.0"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+            <modelVersion>4.0.0</modelVersion>
+            <groupId>ru.mirsamozanyatykh</groupId>
+            <artifactId>libbox</artifactId>
+            <version>1.0.0</version>
+            <packaging>aar</packaging>
+          </project>
+          EOF
+          test -s "$MAVEN_DIR/libbox-1.0.0.aar"
+          test -s "$MAVEN_DIR/libbox-1.0.0.pom"
+
       - name: Установить JavaScript-зависимости
         run: pnpm install --frozen-lockfile
 
@@ -122,8 +136,14 @@ jobs:
           cat android/local.properties
           test -f "$ANDROID_HOME/platforms/android-35/android.jar"
 
-      - name: Проверить наличие AAR
-        run: test -s build/native/libbox.aar
+      - name: Проверить сгенерированный Gradle и libbox
+        working-directory: android
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -R "ru.mirsamozanyatykh:libbox:1.0.0" app/build.gradle
+          grep -R "build/native/maven" build.gradle settings.gradle app/build.gradle 2>/dev/null || true
+          test -s ../build/native/maven/ru/mirsamozanyatykh/libbox/1.0.0/libbox-1.0.0.aar
 
       - name: Собрать отладочный APK
         id: assemble
@@ -165,4 +185,4 @@ jobs:
         run: |
           echo "libbox revision: $(cat build/native/sing-box-revision.txt)"
           echo "libbox SHA256: $(cut -d' ' -f1 build/native/libbox.aar.sha256)"
-          echo "Preflight: SDK API 21/23/35/36 + NDK 28 + AAR checksum + CommandServer проверены"
+          echo "Preflight: SDK API 21/23/35/36 + NDK 28 + Maven libbox + AAR checksum + CommandServer проверены"
