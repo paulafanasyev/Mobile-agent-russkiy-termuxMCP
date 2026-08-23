@@ -1,0 +1,9 @@
+{
+  "platforms": ["android"],
+  "android": {
+    "modules": [
+      "expo.modules.localai.LocalAiModule",
+      "expo.modules.localai.VoiceModule"
+    ]
+  }
+}
