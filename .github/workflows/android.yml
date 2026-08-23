@@ -112,15 +112,37 @@ jobs:
       - name: Expo prebuild
         run: pnpm exec expo prebuild --platform android --clean
 
+      - name: Зафиксировать Android SDK для Gradle
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${ANDROID_HOME:?ANDROID_HOME отсутствует после prebuild}"
+          printf 'sdk.dir=%s\n' "$ANDROID_HOME" > android/local.properties
+          test -s android/local.properties
+          cat android/local.properties
+          test -f "$ANDROID_HOME/platforms/android-35/android.jar"
+
       - name: Проверить наличие AAR
         run: test -s build/native/libbox.aar
 
       - name: Собрать отладочный APK
+        id: assemble
         working-directory: android
         shell: bash
         run: |
           set -o pipefail
           ./gradlew assembleDebug --no-daemon --stacktrace --info --console=plain 2>&1 | tee "$RUNNER_TEMP/gradle-assemble-debug.log"
+
+      - name: Сохранить полный Gradle лог при ошибке
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: android-gradle-diagnostics-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/gradle-assemble-debug.log
+            ${{ runner.temp }}/libbox-build.log
+            android/local.properties
+          if-no-files-found: warn
 
       - name: Найти APK
         id: apk
