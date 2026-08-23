@@ -1,4 +1,4 @@
-export type LocalAiBackend = 'llama.cpp' | 'litert' | 'executorch' | 'none';
+export type LocalAiBackend = 'llama.cpp' | 'litert' | 'executorch' | 'mnn' | 'none';
 
 export type DeviceTier = 'low' | 'standard' | 'high';
 
