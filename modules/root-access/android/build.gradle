@@ -1,0 +1,14 @@
+apply plugin: 'com.android.library'
+
+android {
+  namespace 'expo.modules.rootaccess'
+  compileSdkVersion project.ext.has('compileSdkVersion') ? project.ext.compileSdkVersion : 35
+
+  defaultConfig {
+    minSdkVersion project.ext.has('minSdkVersion') ? project.ext.minSdkVersion : 24
+  }
+}
+
+dependencies {
+  implementation project(':expo-modules-core')
+}
