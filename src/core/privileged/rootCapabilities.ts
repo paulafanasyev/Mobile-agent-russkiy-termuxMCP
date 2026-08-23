@@ -1,10 +1,7 @@
 /**
- * Privileged capability layer for Svetlana v2.
- *
- * Android cannot grant root to an ordinary application. This module therefore
- * never attempts an exploit or silently escalates privileges. It detects an
- * already-authorized root/privileged bridge and exposes capabilities to the
- * agent runtime. Without root it falls back to normal Android/Termux APIs.
+ * Привилегированный слой возможностей Светланы.
+ * Android не может выдать root обычному приложению, поэтому этот слой
+ * никогда не выполняет эксплойты и не пытается скрытно повышать права.
  */
 
 export type PrivilegedCapabilities = {
@@ -19,39 +16,26 @@ export type PrivilegedCapabilities = {
 
 export type RootProbeResult = {
   available: boolean
+  authorized: boolean
   method: 'su' | 'termux-privileged-bridge' | 'none'
-  uid?: number
+  uid?: number | null
 }
 
-/**
- * Pure capability model. The native/Termux bridge supplies the actual probe.
- * Keeping the policy here prevents the LLM from inventing privileges.
- */
+/** Наличие su НЕ означает наличие root. Нужен успешный uid=0. */
 export function capabilitiesFromProbe(probe: RootProbeResult): PrivilegedCapabilities {
-  if (!probe.available) {
-    return {
-      rootAvailable: false,
-      shell: false,
-      systemSettings: false,
-      packageManagement: false,
-      firewall: false,
-      processControl: false,
-      networkControl: false,
-    }
-  }
-
+  const privileged = probe.available && probe.authorized && probe.uid === 0
   return {
-    rootAvailable: true,
-    shell: true,
-    systemSettings: true,
-    packageManagement: true,
-    firewall: true,
-    processControl: true,
-    networkControl: true,
+    rootAvailable: privileged,
+    shell: privileged,
+    systemSettings: privileged,
+    packageManagement: privileged,
+    firewall: privileged,
+    processControl: privileged,
+    networkControl: privileged,
   }
 }
 
-/** Commands are data, not executable shell text from the LLM. */
+/** Операции представлены как данные; LLM не получает произвольную shell-строку. */
 export const PRIVILEGED_OPERATIONS = [
   'inspect_device',
   'inspect_processes',
