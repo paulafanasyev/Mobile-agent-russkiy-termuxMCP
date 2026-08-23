@@ -8,6 +8,8 @@ export interface SvetlanaMainScreenModel {
   modeTitle: 'Светлана Лайт' | 'Светлана Фулл';
   appearance: ReturnType<typeof getSvetlanaAppearance>;
   firstRunMessage: string;
+  greeting: string;
+  status: 'ready' | 'listening' | 'thinking' | 'speaking';
   offlineFirst: true;
   capabilities: ReturnType<typeof createSvetlanaLaunchPlan>['capabilities'];
   allowFullModeSelection: boolean;
@@ -24,6 +26,8 @@ export function createSvetlanaMainScreen(
     modeTitle: launch.mode === 'lite' ? 'Светлана Лайт' : 'Светлана Фулл',
     appearance: getSvetlanaAppearance(appearanceId),
     firstRunMessage: launch.firstRunMessage,
+    greeting: 'Здравствуйте! Я Светлана. Чем могу помочь?',
+    status: 'ready',
     offlineFirst: true,
     capabilities: launch.capabilities,
     allowFullModeSelection: launch.allowManualFullSelection,
