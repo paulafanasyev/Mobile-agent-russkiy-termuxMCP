@@ -14,20 +14,21 @@ jobs:
       - name: Получить исходники
         uses: actions/checkout@v4
 
-      - name: Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: false
-
-      - name: pnpm
+      - name: Установить pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 10.29.2
           run_install: false
 
-      - name: Проверить pnpm
-        run: pnpm --version
+      - name: Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Проверить инструменты
+        run: |
+          node --version
+          pnpm --version
 
       - name: Установить зависимости и синхронизировать lockfile
         run: pnpm install --no-frozen-lockfile
