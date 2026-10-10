@@ -43,6 +43,7 @@ import {
 } from "lucide-react-native";
 import { useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import Svg, { G, Path, Rect } from "react-native-svg";
 
 import type { Conversation } from "@/core/types/app-state";
 import { cn } from "@/core/utils";
@@ -166,9 +167,19 @@ export function AppSidebar() {
     <>
       <Sidebar>
         <SidebarHeader className="min-h-8 flex-row items-center justify-between">
-          <Text className="font-sans text-2xl font-semibold text-foreground dark:text-foreground-dark">
-            Mobile Agent
-          </Text>
+          <View className="flex-row items-center gap-sp-2">
+            <Svg width={34} height={30} viewBox="0 0 112 80" accessibilityLabel="Pavel Afanasev logo">
+              <Rect width={112} height={80} rx={10} fill="#ffffff" />
+              <G fill="#168779">
+                <Path fillRule="evenodd" d="M8 6h30a22 22 0 0 1 0 44H24v24H8zM24 20v16h13a8 8 0 0 0 0-16z" />
+                <Path d="M58 6h14L52 74H38z" />
+                <Path d="M80 33h12l14 15-14 15H80l14-15z" />
+              </G>
+            </Svg>
+            <Text className="font-sans text-xl font-semibold text-foreground dark:text-foreground-dark">
+              Mobile Agent
+            </Text>
+          </View>
           <SidebarClose asChild>
             <Button
               accessibilityLabel="New chat"
