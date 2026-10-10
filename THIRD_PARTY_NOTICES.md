@@ -20,3 +20,8 @@ Before publishing or distributing a build, verify and retain:
 ## Audit status
 
 This document defines the boundary and release checklist; it is **not** a claim that every transitive dependency and every media/model asset has already been individually cleared. A release must not be marked license-audited until an SBOM/license report for its exact commit and asset inventory has been reviewed and retained.
+
+## Historical reference audit (2026-10-10)
+
+- The repository refs endpoint exposed only `main` among branch/tag refs at the time of this check; `main` contains the current proprietary `LICENSE`.
+- The package metadata now points to `SEE LICENSE IN LICENSE` instead of declaring MIT, matching the current repository notice. This does not alter licenses of dependencies or permissions already granted for historical revisions distributed under MIT.
