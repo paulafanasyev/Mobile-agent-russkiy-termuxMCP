@@ -25,3 +25,7 @@ This document defines the boundary and release checklist; it is **not** a claim 
 
 - The repository refs endpoint exposed only `main` among branch/tag refs at the time of this check; `main` contains the current proprietary `LICENSE`.
 - The package metadata now points to `SEE LICENSE IN LICENSE` instead of declaring MIT, matching the current repository notice. This does not alter licenses of dependencies or permissions already granted for historical revisions distributed under MIT.
+
+## Specific component-license finding: libbox / sing-box
+
+The Android build compiles and bundles `libbox` from the [singbox-android/libbox project](https://github.com/singbox-android/libbox), which declares **GPL-3.0**; the upstream [sing-box project](https://github.com/SagerNet/sing-box) declares GPL-3.0-or-later. The proprietary `LICENSE` in this repository applies only to original materials owned by Pavel Afanasev and cannot override the upstream GPL. Before distributing a closed-source or commercial APK, preserve required upstream notices and verify the corresponding-source and other GPL obligations with qualified legal review. Do not describe the whole app as proprietary-only while this component is included.
